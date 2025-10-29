@@ -1,4 +1,4 @@
-package chemistrydsl
+package dsl
 
 final case class NoCoefEquation(leftMember: NoCoefEquation.Member, rightMember: NoCoefEquation.Member)
 
