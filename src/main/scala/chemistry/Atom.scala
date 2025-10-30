@@ -1,8 +1,8 @@
 package chemistry
 
-import units.{U, u}
+import units.{AtomicMassUnit, u}
 
-enum Atom(val elementSymbol: String, val atomicMass: U) {
+enum Atom(val elementSymbol: String, val atomicMass: AtomicMassUnit) {
   case Hydrogen extends Atom("H", 1.007.u)
   case Helium extends Atom("He", 4.002.u)
   case Lithium extends Atom("Li", 6.941.u)

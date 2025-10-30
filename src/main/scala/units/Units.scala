@@ -1,37 +1,41 @@
 package units
 
+trait PhysicalUnit[T <: PhysicalUnit[T]] {
+
+  def value: Double
+  def newValue(value: Double): T
+
+  val + : T => T = linearBinop(_ + _)
+  val - : T => T = linearBinop(_ - _)
+
+  val * : Double => T = scalarBinop(_ * _)
+  val / : Double => T = scalarBinop(_ / _)
+  
+  val < : T => Boolean = comparisonOp(_ < _)
+  val > : T => Boolean = comparisonOp(_ > _)
+
+  private def linearBinop(op: (Double, Double) => Double)(that: T): T = newValue(op(this.value, that.value))
+
+  private def scalarBinop(op: (Double, Double) => Double)(d: Double): T = newValue(op(this.value, d))
+  
+  private def comparisonOp(op: (Double, Double) => Boolean)(that: T): Boolean = op(this.value, that.value)
+  
+  def unary_- : T = newValue(-value)
+
+}
+
 /**
  * Unified atomic mass unit (Dalton)
  */
-final case class U(value: Double) extends Arithmetic[U] {
-  override def newValue(value: Double): U = U(value)
+final case class AtomicMassUnit(value: Double) extends PhysicalUnit[AtomicMassUnit] {
+  override def newValue(value: Double): AtomicMassUnit = AtomicMassUnit(value)
 
   override def toString: String = s"$value u"
 }
 
-extension (d: Double) {
+extension (value: Double) {
   
-  def *[T <: Arithmetic[T]](that: T): T = that * d
+  def *[T <: PhysicalUnit[T]](that: T): T = that * value
   
-  /**
-   * Unified atomic mass unit (Dalton)
-   */
-  def u = U(d)
-}
-
-trait Arithmetic[T <: Arithmetic[T]] {
-
-  def value: Double
-  def newValue(value: Double): T
-  
-  val + = linearBinop(_ + _)
-  val - = linearBinop(_ - _)
-  
-  val * = scalarBinop(_ * _)
-  val / = scalarBinop(_ / _)
-  
-  private def linearBinop(op: (Double, Double) => Double)(that: T): T = newValue(op(this.value, that.value))
-  
-  private def scalarBinop(op: (Double, Double) => Double)(d: Double): T = newValue(op(this.value, d))
-  
+  def u: AtomicMassUnit = AtomicMassUnit(value)
 }

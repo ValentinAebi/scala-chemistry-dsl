@@ -4,7 +4,7 @@ final case class NoCoefEquation(leftMember: NoCoefEquation.Member, rightMember: 
 
 object NoCoefEquation {
   
-  final case class Member(molecules: List[SyntacticMolecule]) {
+  final case class Member(molecules: List[NoChargeMolecule]) {
     def +(that: Member) = Member(this.molecules ++ that.molecules)
     
     def ===>(that: Member) = NoCoefEquation(this, that)
