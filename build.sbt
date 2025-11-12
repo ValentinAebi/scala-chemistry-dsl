@@ -4,5 +4,6 @@ ThisBuild / scalaVersion := "3.7.3"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "chemistry-equations-dsl"
+    name := "chemistry-equations-dsl",
+    scalacOptions += "-language:implicitConversions"
   )

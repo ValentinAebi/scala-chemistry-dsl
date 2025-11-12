@@ -122,3 +122,9 @@ enum Atom(val elementSymbol: String, val atomicMass: AtomicMassUnit) {
   case Tennessine extends Atom("Ts", 295.u)
   case Oganesson extends Atom("Og", 294.u)
 }
+
+object Atom {
+
+  def parse(str: String): Option[Atom] = values.find(_.elementSymbol == str)
+  
+}
