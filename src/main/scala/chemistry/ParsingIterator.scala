@@ -27,7 +27,7 @@ class ParsingIterator(str: String) extends Iterator[String] {
     } else if (token.head == ')') {
       throw MoleculeFormatException("unexpected closing parenthesis")
     } else if (token.head.isLetter) {
-      while (pendingChar.exists(_.isLetter)) {
+      while (pendingChar.exists(_.isLower)) {
         token += advance()
       }
     } else if (token.head.isDigit) {

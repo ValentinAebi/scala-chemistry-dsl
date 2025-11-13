@@ -41,6 +41,7 @@ def parseMolecule(str: String): Molecule = {
       consumePending(1)
       pending.addAll(subMolecule.atoms)
     } else if (token.head == '^') {
+      consumePending(1)
       if (!parsingIter.hasNext) {
         throw MoleculeFormatException("illegal notation of charge")
       }
@@ -67,10 +68,15 @@ def parseMolecule(str: String): Molecule = {
         throw MoleculeFormatException("molecule must end after charge")
       }
       val charge = if plusOrMinusToken == "+" then chargeAbsValToken.toInt else -chargeAbsValToken.toInt
-      return Molecule(atomsMap.toMap, charge)
+      val molecule = Molecule(atomsMap.toMap, charge)
+      molecule.originalStr = str
+      return molecule
     } else {
       throw MoleculeFormatException(s"token unexpected at its position: $token")
     }
   }
-  Molecule(atomsMap.toMap, 0)
+  consumePending(1)
+  val molecule = Molecule(atomsMap.toMap, 0)
+  molecule.originalStr = str
+  molecule
 }
