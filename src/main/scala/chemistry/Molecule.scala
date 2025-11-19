@@ -31,5 +31,7 @@ final case class Molecule(atoms: Map[Atom, Int], charge: Int) {
     }
     mass
   }
+  
+  def atomCnt(atom: Atom): Int = atoms.getOrElse(atom, 0)
 
 }

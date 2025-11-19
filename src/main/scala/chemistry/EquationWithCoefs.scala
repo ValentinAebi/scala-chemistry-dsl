@@ -1,0 +1,80 @@
+package chemistry
+
+import math.{Matrix, gcd, lcm}
+
+final case class EquationWithCoefs(left: List[(Molecule, Int)], right: List[(Molecule, Int)]) {
+
+  override def toString: String = s"${memberToString(left)} --> ${memberToString(right)}"
+
+  private def memberToString(member: List[(Molecule, Int)]): String =
+    member.map {
+      case (molec, 1) => molec.toString
+      case (molec, coef) => s"$coef $molec"
+    }.mkString(" + ")
+
+}
+
+object EquationWithCoefs {
+
+  def balancedFrom(noCoefEq: NoCoefEquation): Option[EquationWithCoefs] = {
+    val matrix = generateMatrix(noCoefEq)
+    if (matrix.nRows >= matrix.nCols) {
+      return None
+    }
+    try {
+      matrix.diagonalize()
+    } catch {
+      case arithmeticException: ArithmeticException =>
+        return None
+    }
+    val diagLcm = lcm(matrix.diagonal)
+    val coefs = (0 until matrix.nCols).map { colIdx =>
+      if colIdx < matrix.nRows then -diagLcm * matrix(colIdx, matrix.nCols - 1) / matrix(colIdx, colIdx)
+      else if colIdx == matrix.nCols - 1 then diagLcm
+      else 0
+    }
+    val coefGcd = gcd(coefs)
+    val minimizedCoefsIter = coefs.iterator.map(_ / coefGcd)
+    val leftMemberB = List.newBuilder[(Molecule, Int)]
+    for (molec <- noCoefEq.leftMember) {
+      leftMemberB.addOne(molec, minimizedCoefsIter.next())
+    }
+    val rightMemberB = List.newBuilder[(Molecule, Int)]
+    for (molec <- noCoefEq.rightMember){
+      rightMemberB.addOne(molec, minimizedCoefsIter.next())
+    }
+    Some(EquationWithCoefs(leftMemberB.result(), rightMemberB.result()))
+  }
+
+  private def generateMatrix(noCoefEq: NoCoefEquation): Matrix = {
+    val coefRows = noCoefEq.allAtoms.toSeq.sortBy(_.ordinal).map(matrixRow(noCoefEq, _))
+    Matrix(coefRows ++ chargesRow(noCoefEq))
+  }
+
+  private def matrixRow(noCoefEq: NoCoefEquation, atom: Atom): Seq[Int] = {
+    val seqB = Seq.newBuilder[Int]
+    for (molec <- noCoefEq.leftMember) {
+      seqB.addOne(molec.atomCnt(atom))
+    }
+    for (molec <- noCoefEq.rightMember) {
+      seqB.addOne(-molec.atomCnt(atom))
+    }
+    seqB.result()
+  }
+
+  private def chargesRow(noCoefEq: NoCoefEquation): Option[Seq[Int]] = {
+    var allZeros = true
+    val seqB = Seq.newBuilder[Int]
+    for (molec <- noCoefEq.leftMember) {
+      seqB.addOne(molec.charge)
+      allZeros &= molec.charge == 0
+    }
+    for (molec <- noCoefEq.rightMember) {
+      seqB.addOne(-molec.charge)
+      allZeros &= molec.charge == 0
+    }
+    Option.when(!allZeros)(seqB.result())
+  }
+
+
+}

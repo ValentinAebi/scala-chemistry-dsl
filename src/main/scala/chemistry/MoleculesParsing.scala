@@ -3,10 +3,13 @@ package chemistry
 import dsl.MoleculeFormatException
 
 import scala.collection.mutable
-import scala.compiletime.uninitialized
 
 
 def parseMolecule(str: String): Molecule = {
+  if (str.isEmpty){
+    throw MoleculeFormatException("empty molecule")
+  }
+  
   val parsingIter = ParsingIterator(str)
   val atomsMap = mutable.Map.empty[Atom, Int]
   val pending = mutable.Map.empty[Atom, Int]
