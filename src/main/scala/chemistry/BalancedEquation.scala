@@ -2,7 +2,11 @@ package chemistry
 
 import math.{Matrix, gcd, lcm}
 
-final case class EquationWithCoefs(left: List[(Molecule, Int)], right: List[(Molecule, Int)]) {
+final case class BalancedEquation private(left: List[(Molecule, Int)], right: List[(Molecule, Int)]) extends Equation {
+
+  override def leftMemberMolecules: Set[Molecule] = left.map(_._1).toSet
+
+  override def rightMemberMolecules: Set[Molecule] = right.map(_._1).toSet
 
   override def toString: String = s"${memberToString(left)} --> ${memberToString(right)}"
 
@@ -14,9 +18,9 @@ final case class EquationWithCoefs(left: List[(Molecule, Int)], right: List[(Mol
 
 }
 
-object EquationWithCoefs {
+object BalancedEquation {
 
-  def balancedFrom(noCoefEq: NoCoefEquation): Option[EquationWithCoefs] = {
+  def balancedFrom(noCoefEq: NoCoefEquation): Option[BalancedEquation] = {
     val matrix = generateMatrix(noCoefEq)
     if (matrix.nRows >= matrix.nCols) {
       return None
@@ -43,7 +47,7 @@ object EquationWithCoefs {
     for (molec <- noCoefEq.rightMember){
       rightMemberB.addOne(molec, minimizedCoefsIter.next())
     }
-    Some(EquationWithCoefs(leftMemberB.result(), rightMemberB.result()))
+    Some(BalancedEquation(leftMemberB.result(), rightMemberB.result()))
   }
 
   private def generateMatrix(noCoefEq: NoCoefEquation): Matrix = {

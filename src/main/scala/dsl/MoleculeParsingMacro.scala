@@ -6,12 +6,18 @@ import scala.quoted.{Expr, Quotes}
 
 inline def parseAndStaticCheckMolecule(inline str: String): Molecule = ${parseAndStaticCheckMoleculeMacroImpl('str)}
 
-private def parseAndStaticCheckMoleculeMacroImpl(str: Expr[String])(using Quotes): Expr[Molecule] = {
+private def parseAndStaticCheckMoleculeMacroImpl(str: Expr[String])(using quotes: Quotes): Expr[Molecule] = {
+  import quotes.reflect.report
   str.value match {
     case Some(value) =>
-      parseMolecule(value)
+      try {
+        parseMolecule(value)
+      } catch {
+        case MoleculeFormatException(msg) =>
+          report.errorAndAbort(msg, str)
+      }
       '{parseMolecule(${str})}
     case None =>
-      throw MoleculeFormatException("an attempt to convert this String to a Molecule failed because it is not expressed as a literal")
+      report.errorAndAbort("an attempt to convert this String to a Molecule failed because it is not expressed as a literal", str)
   }
 }

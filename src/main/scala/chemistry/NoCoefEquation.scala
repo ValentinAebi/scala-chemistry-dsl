@@ -2,8 +2,12 @@ package chemistry
 
 import chemistry.Molecule
 
-final case class NoCoefEquation(leftMember: List[Molecule], rightMember: List[Molecule]) {
-  
+final case class NoCoefEquation(leftMember: List[Molecule], rightMember: List[Molecule]) extends Equation {
+
+  override def leftMemberMolecules: Set[Molecule] = leftMember.toSet
+
+  override def rightMemberMolecules: Set[Molecule] = rightMember.toSet
+
   def withAdditionalLeft(additionalMolecule: Molecule): NoCoefEquation =
     copy(leftMember = additionalMolecule :: leftMember)
     
@@ -11,16 +15,5 @@ final case class NoCoefEquation(leftMember: List[Molecule], rightMember: List[Mo
     copy(rightMember = rightMember :+ additionalMolecule)
 
   override def toString: String = s"${leftMember.mkString(" + ")} ==> ${rightMember.mkString(" + ")}"
-  
-  def allAtoms: Set[Atom] = {
-    val atomsB = Set.newBuilder[Atom]
-    for (molec <- leftMember){
-      atomsB.addAll(molec.atoms.keys)
-    }
-    for (molec <- rightMember){
-      atomsB.addAll(molec.atoms.keys)
-    }
-    atomsB.result()
-  }
   
 }

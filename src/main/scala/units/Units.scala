@@ -33,9 +33,27 @@ final case class AtomicMassUnit(value: Double) extends PhysicalUnit[AtomicMassUn
   override def toString: String = s"$value u"
 }
 
+final case class Gram(value: Double) extends PhysicalUnit[Gram] {
+  override def newValue(value: Double): Gram = Gram(value)
+
+  override def toString: String = s"$value g"
+  
+  def /(amu: AtomicMassUnit): Mol = Mol(this.value / amu.value)
+}
+
+final case class Mol(value: Double) extends PhysicalUnit[Mol] {
+  override def newValue(value: Double): Mol = Mol(value)
+
+  override def toString: String = s"$value mol"
+}
+
 extension (value: Double) {
   
   def *[T <: PhysicalUnit[T]](that: T): T = that * value
   
   def u: AtomicMassUnit = AtomicMassUnit(value)
+  
+  def g: Gram = Gram(value)
+  
+  def mol: Mol = Mol(value)
 }
