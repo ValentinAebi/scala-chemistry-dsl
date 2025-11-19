@@ -4,10 +4,9 @@ import chemistry.{Molecule, NoCoefEquation, parseMolecule}
 
 import scala.quoted.{Expr, Quotes}
 
-// seems necessary to use the old style: https://users.scala-lang.org/t/given-style-implicit-conversion-with-inline-function/7536/2
-implicit inline def str2Molecule(inline str: String): Molecule = ${str2MoleculeMacroImpl('str)}
+inline def parseAndStaticCheckMolecule(inline str: String): Molecule = ${parseAndStaticCheckMoleculeMacroImpl('str)}
 
-private def str2MoleculeMacroImpl(str: Expr[String])(using Quotes): Expr[Molecule] = {
+private def parseAndStaticCheckMoleculeMacroImpl(str: Expr[String])(using Quotes): Expr[Molecule] = {
   str.value match {
     case Some(value) =>
       parseMolecule(value)

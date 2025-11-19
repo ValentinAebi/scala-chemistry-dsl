@@ -1,12 +1,17 @@
 package dsl
 
-import chemistry.{Molecule, NoCoefEquation}
+import chemistry.{Molecule, NoCoefEquation, parseMolecule}
 
-extension (l: Molecule) def ==>(r: Molecule): NoCoefEquation =
-  NoCoefEquation(List(l), List(r))
+final case class LeftMember(molecules: List[Molecule])
 
-extension (l: Molecule) def &(r: NoCoefEquation): NoCoefEquation =
-  r.copy(leftMember = l :: r.leftMember)
+extension (inline str: String) inline def unary_~ =
+  LeftMember(List(parseAndStaticCheckMolecule(str)))
 
-extension (l: NoCoefEquation) def &(r: Molecule): NoCoefEquation =
-  l.copy(rightMember = l.rightMember :+ r)
+extension (inline l: LeftMember) inline def ->(inline r: String): NoCoefEquation =
+  NoCoefEquation(l.molecules, List(parseAndStaticCheckMolecule(r)))
+  
+extension (inline l: LeftMember) inline def +(inline r: String): LeftMember =
+  LeftMember(l.molecules :+ parseAndStaticCheckMolecule(r))
+
+extension (inline l: NoCoefEquation) inline def +(inline r: String): NoCoefEquation =
+  l.withAdditionalRight(parseAndStaticCheckMolecule(r))

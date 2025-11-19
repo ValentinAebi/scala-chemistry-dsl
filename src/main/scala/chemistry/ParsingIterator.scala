@@ -17,7 +17,7 @@ class ParsingIterator(str: String) extends Iterator[String] {
       var level = 1
       while (level > 0) {
         if (!strIter.hasNext) {
-          throw MoleculeFormatException("missing closing parethesis")
+          throw MoleculeFormatException("missing closing parenthesis")
         }
         val c = advance()
         token += c
