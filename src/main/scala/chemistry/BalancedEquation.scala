@@ -22,9 +22,6 @@ object BalancedEquation {
 
   def balancedFrom(noCoefEq: NoCoefEquation): Option[BalancedEquation] = {
     val matrix = generateMatrix(noCoefEq)
-    if (matrix.nRows >= matrix.nCols) {
-      return None
-    }
     try {
       matrix.diagonalize()
     } catch {
@@ -32,9 +29,9 @@ object BalancedEquation {
         return None
     }
     val diagLcm = lcm(matrix.diagonal)
-    val coefs = (0 until matrix.nCols).map { colIdx =>
-      if colIdx < matrix.nRows then -diagLcm * matrix(colIdx, matrix.nCols - 1) / matrix(colIdx, colIdx)
-      else if colIdx == matrix.nCols - 1 then diagLcm
+    val coefs = (0 until matrix.nCols()).map { colIdx =>
+      if colIdx < matrix.nRows() then -diagLcm * matrix(colIdx, matrix.nCols() - 1) / matrix(colIdx, colIdx)
+      else if colIdx == matrix.nCols() - 1 then diagLcm
       else 0
     }
     val coefGcd = gcd(coefs)

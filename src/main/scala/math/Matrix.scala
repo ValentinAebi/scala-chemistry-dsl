@@ -1,14 +1,17 @@
 package math
 
 import java.util.{Objects, StringJoiner}
+import scala.collection.mutable
 
 
-final class Matrix(val nRows: Int, val nCols: Int) {
-  private val cells = Array.fill(nRows)(new Array[Int](nCols))
+final class Matrix(nRowsInit: Int, nColsInit: Int) {
+  private val cells = mutable.ListBuffer.fill(nRowsInit)(mutable.ListBuffer.fill(nColsInit)(0))
 
-  private val rowsRange = 0 until nRows
-  private val colsRange = 0 until nCols
-  private val squareRange = 0 until Math.min(nRows, nCols)
+  def nRows(): Int = cells.length
+
+  def nCols(): Int = cells.head.length
+
+  def sqSize(): Int = Math.min(nRows(), nCols())
 
   def update(pos: (Int, Int), value: Int): Unit = {
     val (row, col) = pos
@@ -20,35 +23,39 @@ final class Matrix(val nRows: Int, val nCols: Int) {
     cells(row)(col)
   }
 
-  def diagonal: Seq[Int] = squareRange.map(idx => this (idx, idx))
+  def diagonal: Seq[Int] = (0 until sqSize()).map(idx => this (idx, idx))
 
   override def toString: String = {
     val strRepr = cells.map(_.map(_.toString))
-    val colsWidth = (0 until nCols).map { c =>
-      (0 until nRows).foldLeft(0) { (acc, r) =>
+    val colsWidth = (0 until nCols()).map { c =>
+      (0 until nRows()).foldLeft(0) { (acc, r) =>
         Math.max(acc, strRepr(r)(c).length)
       }
     }
     val rowsJoiner = StringJoiner("\n")
-    for (r <- rowsRange) {
+    var r = 0
+    while (r < nRows()) {
       val colsJoiner = StringJoiner(" ")
-      for (c <- colsRange) {
+      var c = 0
+      while (c < nCols()) {
         colsJoiner.add(this (r, c).toString.padLeft(colsWidth(c)))
+        c += 1
       }
       rowsJoiner.add(colsJoiner.toString)
+      r += 1
     }
     rowsJoiner.toString
   }
 
   override def equals(thatObj: Any): Boolean = thatObj match {
     case that: Matrix =>
-      if (!(this.nRows == that.nRows && this.nCols == that.nCols)) {
+      if (!(this.nRows() == that.nRows() && this.nCols() == that.nCols())) {
         return false
       }
       var r = 0
-      while (r < nRows) {
+      while (r < nRows()) {
         var c = 0
-        while (c < nCols) {
+        while (c < nCols()) {
           if (this (r, c) != that(r, c)) {
             return false
           }
@@ -60,7 +67,7 @@ final class Matrix(val nRows: Int, val nCols: Int) {
     case _ => false
   }
 
-  override def hashCode(): Int = Objects.hash(nRows, nCols, cells)
+  override def hashCode(): Int = Objects.hash(nRows(), nCols(), cells)
 
   def diagonalize(): Unit = {
     eliminateLow()
@@ -68,23 +75,36 @@ final class Matrix(val nRows: Int, val nCols: Int) {
   }
 
   private def eliminateLow(): Unit = {
-    for (colIdx <- squareRange) {
-      nullifyColDown(colIdx)
-      minimizeRow(colIdx)
+    var colIdx = 0
+    while (colIdx < sqSize()) {
+      val removed = removeZeroRows()
+      if (!removed) {
+        nullifyColDown(colIdx)
+        minimizeRow(colIdx)
+        colIdx += 1
+      }
     }
   }
 
   private def eliminateUp(): Unit = {
-    for (colIdx <- squareRange.reverse) {
+    var colIdx = 0
+    while (colIdx < sqSize()) {
       nullifyColUp(colIdx)
       minimizeRow(colIdx)
+      colIdx += 1
     }
+  }
+
+  private def removeZeroRows(): Boolean = {
+    val preSize = cells.size
+    cells.filterInPlace(_.exists(_ != 0))
+    cells.size < preSize
   }
 
   private def nullifyColDown(colIdx: Int): Unit = {
     ensurePivotIsNonZero(colIdx)
     val pivot = this (colIdx, colIdx)
-    for (rowIdx <- (colIdx + 1) until nRows) {
+    for (rowIdx <- (colIdx + 1) until nRows()) {
       val headCoef = this (rowIdx, colIdx)
       val d = gcd(pivot, headCoef)
       combineRows(rowIdx, pivot / d, colIdx, -headCoef / d, rowIdx)
@@ -102,7 +122,7 @@ final class Matrix(val nRows: Int, val nCols: Int) {
 
   private def combineRows(row1Idx: Int, coef1: Int, row2Idx: Int, coef2: Int, outRowIdx: Int): Unit = {
     var colIdx = 0
-    while (colIdx < nCols) {
+    while (colIdx < nCols()) {
       this ((outRowIdx, colIdx)) = coef1 * this (row1Idx, colIdx) + coef2 * this (row2Idx, colIdx)
       colIdx += 1
     }
@@ -110,13 +130,10 @@ final class Matrix(val nRows: Int, val nCols: Int) {
 
   private def ensurePivotIsNonZero(pivotIdx: Int): Unit = {
     var otherRowIdx = pivotIdx
-    while (this (otherRowIdx, pivotIdx) == 0) {
+    while (otherRowIdx < nRows() && this (otherRowIdx, pivotIdx) == 0) {
       otherRowIdx += 1
-      if (otherRowIdx >= nRows) {
-        throw ArithmeticException()
-      }
     }
-    if (otherRowIdx != pivotIdx) {
+    if (otherRowIdx < nRows() && otherRowIdx != pivotIdx) {
       combineRows(pivotIdx, 1, otherRowIdx, 1, pivotIdx)
       minimizeRow(pivotIdx)
     }
@@ -124,7 +141,7 @@ final class Matrix(val nRows: Int, val nCols: Int) {
 
   private def minimizeRow(rowIdx: Int): Unit = {
     val line = cells(rowIdx)
-    var d = gcd(line)
+    var d = gcd(line.toSeq)
     if (line.find(_ != 0).exists(_ < 0)) {
       d = -d
     }
