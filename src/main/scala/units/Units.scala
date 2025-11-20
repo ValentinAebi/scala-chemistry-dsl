@@ -57,6 +57,12 @@ final case class Mol(value: Double) extends PhysicalUnit[Mol] {
   def *(amu: AtomicMassUnit): Gram = Gram(value * amu.value)
 }
 
+final case class Liter(value: Double) extends PhysicalUnit[Liter] {
+  override def newValue(value: Double): Liter = Liter(value)
+
+  override def toString: String = f"$value%.3f L"
+}
+
 extension (value: Double) {
 
   def *[T <: PhysicalUnit[T]](that: T): T = that * value
@@ -66,4 +72,6 @@ extension (value: Double) {
   def g: Gram = Gram(value)
 
   def mol: Mol = Mol(value)
+  
+  def L: Liter = Liter(value)
 }

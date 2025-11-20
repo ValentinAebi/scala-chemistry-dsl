@@ -34,6 +34,9 @@ object BalancedEquation {
       else if colIdx == matrix.nCols() - 1 then diagLcm
       else 0
     }
+    if (coefs.exists(_ < 0)) {
+      return None
+    }
     val coefGcd = gcd(coefs)
     val minimizedCoefsIter = coefs.iterator.map(_ / coefGcd)
     val leftMemberB = List.newBuilder[(Molecule, Int)]
@@ -41,7 +44,7 @@ object BalancedEquation {
       leftMemberB.addOne(molec, minimizedCoefsIter.next())
     }
     val rightMemberB = List.newBuilder[(Molecule, Int)]
-    for (molec <- noCoefEq.rightMember){
+    for (molec <- noCoefEq.rightMember) {
       rightMemberB.addOne(molec, minimizedCoefsIter.next())
     }
     Some(BalancedEquation(leftMemberB.result(), rightMemberB.result()))

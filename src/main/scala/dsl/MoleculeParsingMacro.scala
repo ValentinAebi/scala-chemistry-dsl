@@ -4,7 +4,7 @@ import chemistry.{Molecule, NoCoefEquation, parseMolecule}
 
 import scala.quoted.{Expr, Quotes}
 
-inline def parseAndStaticCheckMolecule(inline str: String): Molecule = ${parseAndStaticCheckMoleculeMacroImpl('str)}
+implicit inline def parseAndStaticCheckMolecule(inline str: String): Molecule = ${parseAndStaticCheckMoleculeMacroImpl('str)}
 
 private def parseAndStaticCheckMoleculeMacroImpl(str: Expr[String])(using quotes: Quotes): Expr[Molecule] = {
   import quotes.reflect.report

@@ -1,18 +1,18 @@
 package dsl
 
-import chemistry.{Molecule, Reaction, parseMolecule}
+import chemistry.{Molecule, parseMolecule}
 import dsl.ReactionParam.ReactionEfficiency
 import dsl.parameters.OutType
-import units.{Mol, g, mol}
+import units.{Gram, Mol}
 
 import scala.collection.mutable
 import scala.quoted.*
 
-inline def usingMacro[Res, PC <: ReactionParam | ReactionCommand[Res]](inline reactants: PC): Seq[(Molecule, Mol) | ReactionEfficiency | ReactionCommand[OutType[Res, PC]]] = {
-  ${ usingMacroImplExternal('reactants) }
+inline def equationParametersMacro[Res, PC <: ReactionParam | ReactionCommand[Res]](inline reactants: PC): Seq[(Molecule, Option[Mol]) | ReactionEfficiency | ReactionCommand[OutType[Res, PC]]] = {
+  ${ equationParametersMacroImpl('reactants) }
 }
 
-def usingMacroImplExternal[Res, PC <: ReactionParam | ReactionCommand[Res]](params: Expr[PC])(using quotes: Quotes, pcT: Type[PC], resT: Type[Res]): Expr[Seq[(Molecule, Mol) | ReactionEfficiency | ReactionCommand[OutType[Res, PC]]]] = {
+def equationParametersMacroImpl[Res, PC <: ReactionParam | ReactionCommand[Res]](params: Expr[PC])(using quotes: Quotes, pcT: Type[PC], resT: Type[Res]): Expr[Seq[(Molecule, Option[Mol]) | ReactionEfficiency | ReactionCommand[OutType[Res, PC]]]] = {
   val alreadySeenMolecules = mutable.Set.empty[Molecule]
 
   def checkNotRepeated(molecStr: Expr[String], report: quotes.reflect.report.type): Unit = {
@@ -22,27 +22,21 @@ def usingMacroImplExternal[Res, PC <: ReactionParam | ReactionCommand[Res]](para
     }
   }
 
-  def checkAmount(amountExpr: Expr[Double], report: quotes.reflect.report.type): Unit = {
-    val amountOpt = amountExpr.value
-    if (!amountOpt.exists(_ > 0)) {
-      report.errorAndAbort("amount should be a positive literal", params)
-    }
-  }
-
-  def analyzeParam(param: Expr[ReactionParam]): Expr[(Molecule, Mol) | ReactionEfficiency] = {
-    println("analyzeParam: " + param.show) // TODO remove
+  def analyzeParam(param: Expr[ReactionParam]): Expr[(Molecule, Option[Mol]) | ReactionEfficiency] = {
     import quotes.reflect.report
     param match {
-      case '{ ($amountExpr: Double).mol.of($molecStr: String) } =>
-        checkAmount(amountExpr, report)
+      case '{ ($amountExpr: Mol).of($molecStr: String) } =>
         val molecule = parseAndStaticCheckMoleculeMacroImpl(molecStr)
         checkNotRepeated(molecStr, report)
-        '{ $molecule -> $amountExpr.mol }
-      case '{ ($amountExpr: Double).g.of($molecStr: String) } =>
-        checkAmount(amountExpr, report)
+        '{ $molecule -> Some($amountExpr) }
+      case '{ ($amountExpr: Gram).of($molecStr: String) } =>
         val molecule = parseAndStaticCheckMoleculeMacroImpl(molecStr)
         checkNotRepeated(molecStr, report)
-        '{ $molecule -> $amountExpr.g / $molecule.mass }
+        '{ $molecule -> Some($amountExpr / $molecule.mass) }
+      case '{ nolimit.on($molecStr: String) } =>
+        val molecule = parseAndStaticCheckMoleculeMacroImpl(molecStr)
+        checkNotRepeated(molecStr, report)
+        '{ $molecule -> None }
       case param@'{ efficiency == ($efficiencyPercentExpr: Double).percent } =>
         efficiencyPercentExpr.value match {
           case Some(efficiencyPercentVal) if 0 <= efficiencyPercentVal && efficiencyPercentVal <= 100 =>
@@ -54,9 +48,7 @@ def usingMacroImplExternal[Res, PC <: ReactionParam | ReactionCommand[Res]](para
     }
   }
 
-  def analyzeLeftSeq(params: Expr[ReactionParam]): Expr[Seq[(Molecule, Mol) | ReactionEfficiency]] = {
-    println("analyzeLeftSeq: " + params.show) // TODO remove
-    import quotes.reflect.report
+  def analyzeLeftSeq(params: Expr[ReactionParam]): Expr[Seq[(Molecule, Option[Mol]) | ReactionEfficiency]] = {
     params match {
       case '{ ($r1: ReactionParam) ; ($r2: ReactionParam) } =>
         val left = analyzeLeftSeq(r1)
@@ -67,8 +59,7 @@ def usingMacroImplExternal[Res, PC <: ReactionParam | ReactionCommand[Res]](para
     }
   }
 
-  def analyzeRightSeq(params: Expr[PC]): (Expr[Seq[(Molecule, Mol) | ReactionEfficiency]], Expr[ReactionCommand[OutType[Res, PC]]]) = {
-    println("analyzeRightSeq: " + params.show) // TODO remove
+  def analyzeRightSeq(params: Expr[PC]): (Expr[Seq[(Molecule, Option[Mol]) | ReactionEfficiency]], Expr[ReactionCommand[OutType[Res, PC]]]) = {
     import quotes.reflect.report
     params match {
       case '{ ($r1: ReactionParam) ; ($r2: PC) } =>

@@ -3,9 +3,14 @@ package chemistry
 import chemistry.Reaction.Result.{Failure, Success}
 import units.*
 
-final case class Reaction(equation: Equation, reactants: Seq[(Molecule, Mol)], efficiency: Double) {
+final case class Reaction(equation: Equation, reactants: Seq[(Molecule, Option[Mol])], efficiency: Double) {
 
   def react: Reaction.Result = {
+    reactants.find((molec, amount) => amount.exists(_ < 0.mol)) match {
+      case Some((molec, amount)) =>
+        return Failure(s"negative amount of $molec")
+      case _ => ()
+    }
     val balancedEquation = computeBalancedEquation() match {
       case None =>
         return Failure("could not balance equation")
@@ -17,18 +22,19 @@ final case class Reaction(equation: Equation, reactants: Seq[(Molecule, Mol)], e
       case None => ()
     }
     val reactantsMap = reactants.toMap
-    val individuallyPossibleCoefs = balancedEquation.left.map { (molec, coef) =>
-      molec -> efficiency * reactantsMap.apply(molec) / coef
+    val individuallyPossibleCoefs = balancedEquation.left.flatMap { (molec, coef) =>
+      reactantsMap.apply(molec).map(availableAmount => molec -> efficiency * availableAmount / coef)
     }
     val (limitingReactant, globalCoef) = individuallyPossibleCoefs.minBy(_._2.value)
     val products = balancedEquation.right.map { (molec, coef) =>
       molec -> (coef * globalCoef)
     }
-    val reactantsWithUsage = individuallyPossibleCoefs.map {
-      case (molec, indivCoef) =>
-        val amountAvailable = reactantsMap.getOrElse(molec, 0.mol)
-        (molec, amountAvailable, if indivCoef == 0.mol then 0.0 else globalCoef / indivCoef)
-    }
+    val reactantsWithUsage = individuallyPossibleCoefs.map { (molec, indivCoef) =>
+      val amountAvailable = reactantsMap.getOrElse(molec, Some(0.mol)).get
+      (molec, Some(amountAvailable), if indivCoef == 0.mol then 0.0.mol else globalCoef / indivCoef * amountAvailable)
+    } ++ balancedEquation.left
+      .filter((molec, coef) => reactantsMap.apply(molec).isEmpty)
+      .map((molec, coef) => (molec, None, globalCoef * coef))
     Success(reactantsWithUsage, balancedEquation, efficiency, products)
   }
 
@@ -41,9 +47,8 @@ final case class Reaction(equation: Equation, reactants: Seq[(Molecule, Mol)], e
   }
 
   private def findMissingReactant(balancedEquation: BalancedEquation): Option[Molecule] = {
-    val leftMemberMap = balancedEquation.left.toMap
-    reactants.find { (molec, amount) =>
-      amount <= 0.mol && leftMemberMap.getOrElse(molec, 0) > 0
+    balancedEquation.left.find { (molec, coef) =>
+      coef > 0 && reactants.toMap.get(molec).forall(_.exists(_ <= 0.mol))
     }.map(_._1)
   }
 
@@ -53,7 +58,13 @@ object Reaction {
 
   enum Result {
     case Failure(msg: String)
-    case Success(reactants: Seq[(Molecule, Mol, Double)], balancedEquation: BalancedEquation, efficiency: Double, products: List[(Molecule, Mol)])
+    case Success(reactants: Seq[(Molecule, Option[Mol], Mol)], balancedEquation: BalancedEquation, efficiency: Double, products: List[(Molecule, Mol)])
+
+    def asSuccess: Success = this match {
+      case failure: Failure =>
+        throw AssertionError(failure.toString)
+      case success: Success => success
+    }
 
     override def toString: String = this match {
       case Result.Failure(msg) => s"Reaction failed: $msg"
@@ -68,9 +79,12 @@ object Reaction {
     }
   }
 
-  private def formatReactantsAmounts(reactants: Seq[(Molecule, Mol, Double)]) = {
-    reactants.map { (molec, amount, useProport) =>
-      f"$molec: $amount (${amount * molec.mass}) of which ${useProport * 100}%.2f" + "% were used"
+  private def formatReactantsAmounts(reactants: Seq[(Molecule, Option[Mol], Mol)]) = {
+    reactants.map {
+      case (molec, Some(amountAvailable), amountUsed) =>
+        f"$molec: $amountAvailable (${amountAvailable * molec.mass}) of which ${amountUsed / amountAvailable * 100}%.2f" + "% were used"
+      case (molec, None, amoundUsed) =>
+        s"$molec: unlimited, $amoundUsed (${amoundUsed * molec.mass}) were used"
     }.mkString("\n")
   }
 

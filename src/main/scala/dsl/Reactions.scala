@@ -1,10 +1,11 @@
 package dsl
 
+import chemistry.Reaction.Result.Success
 import chemistry.{Equation, Molecule, Reaction}
-import dsl.ReactionParam.ReactionEfficiency
-import units.{Gram, Mol}
+import dsl.ReactionParam.{ReactionEfficiency, UnlimitedReactant}
+import units.{Gram, Mol, mol}
 
-final case class ReactionParams(reactants: Seq[(Molecule, Mol)], efficiency: Double) {
+final case class ReactionParams(reactants: Seq[(Molecule, Option[Mol])], efficiency: Double) {
 
   override def toString: String = {
     s"ReactionData {\n" +
@@ -29,18 +30,18 @@ object reaction {
 }
 
 object parameters {
-  
+
   type OutType[Res, PC <: ReactionParam | ReactionCommand[Res]] = PC match {
     case ReactionParam => Reaction
     case ReactionCommand[Res] => Res
   }
 
   inline def apply[Res, PC <: ReactionParam | ReactionCommand[Res]](inline reactants: PC): (ReactionParams, ReactionCommand[OutType[Res, PC]]) = {
-    val inputsB = Seq.newBuilder[(Molecule, Mol)]
+    val inputsB = Seq.newBuilder[(Molecule, Option[Mol])]
     var efficiency = 1.0
     var command: ReactionCommand[?] = ret
-    usingMacro(reactants) foreach {
-      case p@(molec: Molecule, amount: Mol) =>
+    equationParametersMacro(reactants) foreach {
+      case p: (Molecule, Option[Mol]) =>
         inputsB.addOne(p)
       case ReactionEfficiency(eff) =>
         efficiency = eff
@@ -59,6 +60,7 @@ object equation {
 enum ReactionParam {
   case GramReactant(moleculeStr: String, amount: Gram)
   case MolReactant(moleculeStr: String, amount: Mol)
+  case UnlimitedReactant(moleculeStr: String)
   case ReactionEfficiency(efficiency: Double)
 }
 
@@ -69,9 +71,11 @@ extension (amount: Gram) infix def of(moleculeStr: String): ReactionParam =
   throw new AssertionError()
 
 object efficiency {
-  
   def ==(value: Double): ReactionEfficiency = ReactionEfficiency(value)
-  
+}
+
+object nolimit {
+  infix def on(moleculeStr: String): UnlimitedReactant = UnlimitedReactant(moleculeStr)
 }
 
 extension (value: Double) def percent: Double = value / 100
@@ -97,3 +101,5 @@ case object display extends ReactionCommand[Reaction.Result] {
     result
   }
 }
+
+extension (success: Success) infix def producedAmountOf(molec: Molecule): Mol = success.products.toMap.getOrElse(molec, 0.mol)
