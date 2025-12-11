@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 class MatrixTests {
 
   @Test
-  def diagonalizeSimpleMatrixTest(): Unit = {
+  def gaussianEliminationSimpleMatrixTest(): Unit = {
     val m = Matrix(List(
       List(1, 2, -1, -3),
       List(3, 1, 2, 6),
@@ -18,7 +18,7 @@ class MatrixTests {
       List(0, 0, 1, 2)
     ))
     assertNotEquals(d, m)
-    m.diagonalize()
+    m.gaussianElimination()
     assertEquals(d, m)
   }
 

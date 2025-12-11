@@ -69,7 +69,7 @@ final class Matrix(nRowsInit: Int, nColsInit: Int) {
 
   override def hashCode(): Int = Objects.hash(nRows(), nCols(), cells)
 
-  def diagonalize(): Unit = {
+  def gaussianElimination(): Unit = {
     eliminateLow()
     eliminateUp()
   }
@@ -166,7 +166,7 @@ object Matrix {
     val nCols = coefs.head.size
     for (line <- coefs) {
       if (line.size != nCols) {
-        throw IllegalArgumentException("cannot build a matric from a table with an irregular number of columns")
+        throw IllegalArgumentException("cannot build a matrix from a table with an irregular number of columns")
       }
     }
     val matrix = new Matrix(nRows, nCols)

@@ -23,7 +23,7 @@ object BalancedEquation {
   def balancedFrom(noCoefEq: NoCoefEquation): Option[BalancedEquation] = {
     val matrix = generateMatrix(noCoefEq)
     try {
-      matrix.diagonalize()
+      matrix.gaussianElimination()
     } catch {
       case arithmeticException: ArithmeticException =>
         return None
