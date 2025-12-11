@@ -6,5 +6,5 @@ lazy val root = (project in file("."))
   .settings(
     name := "chemistry-equations-dsl",
     scalacOptions += "-language:implicitConversions",
-    libraryDependencies += "org.junit.jupiter" % "junit-jupiter-api" % "6.1.0-M1" % Test
+    libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % Test
   )

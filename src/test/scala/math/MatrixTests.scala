@@ -1,7 +1,7 @@
 package math
 
-import org.junit.jupiter.api.Assertions.{assertEquals, assertNotEquals, fail}
-import org.junit.jupiter.api.Test
+import org.junit.Assert.{assertEquals, assertNotEquals}
+import org.junit.Test
 
 class MatrixTests {
 

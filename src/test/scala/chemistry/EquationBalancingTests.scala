@@ -1,7 +1,9 @@
+package chemistry
+
 import chemistry.BalancedEquation
-import org.junit.jupiter.api.Test
 import dsl.*
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class EquationBalancingTests {
 
