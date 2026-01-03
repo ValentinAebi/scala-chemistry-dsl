@@ -77,12 +77,8 @@ final class Matrix(nRowsInit: Int, nColsInit: Int) {
   private def eliminateLow(): Unit = {
     var colIdx = 0
     while (colIdx < sqSize()) {
-      val removed = removeZeroRows()
-      if (!removed) {
-        nullifyColDown(colIdx)
-        minimizeRow(colIdx)
-        colIdx += 1
-      }
+      nullifyColDown(colIdx)
+      colIdx += 1
     }
   }
 
@@ -90,41 +86,52 @@ final class Matrix(nRowsInit: Int, nColsInit: Int) {
     var colIdx = 0
     while (colIdx < sqSize()) {
       nullifyColUp(colIdx)
-      minimizeRow(colIdx)
       colIdx += 1
     }
-  }
-
-  private def removeZeroRows(): Boolean = {
-    val preSize = cells.size
-    cells.filterInPlace(_.exists(_ != 0))
-    cells.size < preSize
   }
 
   private def nullifyColDown(colIdx: Int): Unit = {
     ensurePivotIsNonZero(colIdx)
     val pivot = this (colIdx, colIdx)
-    for (rowIdx <- (colIdx + 1) until nRows()) {
+    var rowIdx = colIdx + 1
+    while (rowIdx < nRows()) {
       val headCoef = this (rowIdx, colIdx)
       val d = gcd(pivot, headCoef)
-      combineRows(rowIdx, pivot / d, colIdx, -headCoef / d, rowIdx)
+      val rowPreserved = combineRows(rowIdx, pivot / d, colIdx, -headCoef / d, rowIdx)
+      if (rowPreserved){
+        rowIdx += 1
+      }
     }
   }
 
   private def nullifyColUp(colIdx: Int): Unit = {
     val pivot = this (colIdx, colIdx)
-    for (rowIdx <- 0 until colIdx) {
+    var rowIdx = 0
+    while (rowIdx < colIdx) {
       val tailCoef = this (rowIdx, colIdx)
       val d = gcd(pivot, tailCoef)
-      combineRows(rowIdx, pivot / d, colIdx, -tailCoef / d, rowIdx)
+      val rowPreserved = combineRows(rowIdx, pivot / d, colIdx, -tailCoef / d, rowIdx)
+      if (rowPreserved) {
+        rowIdx += 1
+      }
     }
   }
 
-  private def combineRows(row1Idx: Int, coef1: Int, row2Idx: Int, coef2: Int, outRowIdx: Int): Unit = {
+  /**
+   * @return true iff the row has not been eliminated
+   */
+  private def combineRows(row1Idx: Int, coef1: Int, row2Idx: Int, coef2: Int, outRowIdx: Int): Boolean = {
     var colIdx = 0
     while (colIdx < nCols()) {
       this ((outRowIdx, colIdx)) = coef1 * this (row1Idx, colIdx) + coef2 * this (row2Idx, colIdx)
       colIdx += 1
+    }
+    if (cells(outRowIdx).forall(_ == 0)){
+      cells.remove(outRowIdx)
+      false
+    } else {
+      minimizeRow(outRowIdx)
+      true
     }
   }
 
@@ -134,8 +141,8 @@ final class Matrix(nRowsInit: Int, nColsInit: Int) {
       otherRowIdx += 1
     }
     if (otherRowIdx < nRows() && otherRowIdx != pivotIdx) {
-      combineRows(pivotIdx, 1, otherRowIdx, 1, pivotIdx)
-      minimizeRow(pivotIdx)
+      val rowPreserved = combineRows(pivotIdx, 1, otherRowIdx, 1, pivotIdx)
+      assert(rowPreserved)
     }
   }
 
