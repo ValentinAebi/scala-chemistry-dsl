@@ -1,4 +1,4 @@
-package chemistry
+package dsl.parsing
 
 import dsl.MoleculeFormatException
 

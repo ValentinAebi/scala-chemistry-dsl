@@ -1,5 +1,6 @@
-package chemistry
+package dsl.parsing
 
+import chemistry.{Atom, Molecule}
 import dsl.MoleculeFormatException
 
 import scala.collection.mutable

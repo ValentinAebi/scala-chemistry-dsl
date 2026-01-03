@@ -1,8 +1,9 @@
 package dsl
 
-import chemistry.{Molecule, parseMolecule}
+import chemistry.Molecule
 import dsl.ReactionParam.ReactionEfficiency
 import dsl.parameters.OutType
+import dsl.parsing.parseMolecule
 import units.{Gram, Mol}
 
 import scala.collection.mutable

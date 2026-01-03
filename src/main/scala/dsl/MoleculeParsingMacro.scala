@@ -1,6 +1,7 @@
 package dsl
 
-import chemistry.{Molecule, NoCoefEquation, parseMolecule}
+import chemistry.{Molecule, NoCoefEquation}
+import dsl.parsing.parseMolecule
 
 import scala.quoted.{Expr, Quotes}
 
