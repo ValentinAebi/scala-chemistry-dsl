@@ -7,6 +7,16 @@ final case class BalancedEquation private(left: List[(Molecule, Int)], right: Li
   override def leftMemberMolecules: Set[Molecule] = left.map(_._1).toSet
 
   override def rightMemberMolecules: Set[Molecule] = right.map(_._1).toSet
+  
+  def leftCoefOf(molecule: Molecule): Int =
+    left.find(_._1 == molecule)
+      .map(_._2)
+      .getOrElse(0)
+      
+  def rightCoefOf(molecule: Molecule): Int =
+    right.find(_._1 == molecule)
+      .map(_._2)
+      .getOrElse(0)
 
   override def toString: String = s"${memberToString(left)} --> ${memberToString(right)}"
 

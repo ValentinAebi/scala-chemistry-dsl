@@ -1,6 +1,6 @@
 package units
 
-trait PhysicalUnit[T <: PhysicalUnit[T]] {
+trait PhysicalUnit[T <: PhysicalUnit[T]] extends Comparable[T] {
   l =>
 
   def value: Double
@@ -30,6 +30,7 @@ trait PhysicalUnit[T <: PhysicalUnit[T]] {
 
   def unary_- : T = newValue(-value)
 
+  override def compareTo(that: T): Int = this.value.compareTo(that.value)
 }
 
 /**

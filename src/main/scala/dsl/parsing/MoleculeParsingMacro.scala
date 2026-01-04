@@ -1,6 +1,7 @@
-package dsl
+package dsl.parsing
 
 import chemistry.{Molecule, NoCoefEquation}
+import dsl.MoleculeFormatException
 import dsl.parsing.parseMolecule
 
 import scala.quoted.{Expr, Quotes}

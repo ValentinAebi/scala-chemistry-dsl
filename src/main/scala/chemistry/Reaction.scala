@@ -1,41 +1,47 @@
 package chemistry
 
-import chemistry.Reaction.Result.{Failure, Success}
+import chemistry.Reaction.Result.{Failure, IncompatibleConstraints, Success}
 import units.*
 
-final case class Reaction(equation: Equation, reactants: Seq[(Molecule, Option[Mol])], efficiency: Double) {
+import scala.util.boundary
 
-  def react: Reaction.Result = {
-    reactants.find((molec, amount) => amount.exists(_ < 0.mol)) match {
-      case Some((molec, amount)) =>
-        return Failure(s"negative amount of $molec")
-      case _ => ()
-    }
+final case class Reaction(
+                           equation: Equation,
+                           reactants: Map[Molecule, Mol],
+                           products: Map[Molecule, Mol],
+                           efficiency: Double
+                         ) {
+
+  def react: Reaction.Result = boundary {
     val balancedEquation = computeBalancedEquation() match {
       case None =>
-        return Failure("could not balance equation")
+        boundary.break(Failure("could not balance equation"))
       case Some(balancedEquation) => balancedEquation
     }
-    findMissingReactant(balancedEquation) match {
-      case Some(molecule) =>
-        return Failure(s"no $molecule available for reaction")
-      case None => ()
+    reactants.keys.find(balancedEquation.leftCoefOf(_) == 0).foreach { molec =>
+      boundary.break(Failure(s"no reactant $molec in equation"))
     }
-    val reactantsMap = reactants.toMap
-    val individuallyPossibleCoefs = balancedEquation.left.flatMap { (molec, coef) =>
-      reactantsMap.apply(molec).map(availableAmount => molec -> efficiency * availableAmount / coef)
+    products.keys.find(balancedEquation.rightCoefOf(_) == 0).foreach { molec =>
+      boundary.break(Failure(s"no product $molec in equation"))
     }
-    val (limitingReactant, globalCoef) = individuallyPossibleCoefs.minBy(_._2.value)
-    val products = balancedEquation.right.map { (molec, coef) =>
-      molec -> (coef * globalCoef)
+    val reactantsLimit = reactants.map { (molec, mol) =>
+      molec -> mol / balancedEquation.leftCoefOf(molec)
+    }.minByOption(_._2)
+    val productsLimit = products.map { (molec, mol) =>
+      molec -> (mol / balancedEquation.rightCoefOf(molec))
+    }.maxByOption(_._2)
+    (reactantsLimit, productsLimit) match {
+      case (Some((limitingReactant, minMulInReactants)), Some((mostDemandingProduct, maxMulInProductsWithPerfectEfficiency)))
+        if minMulInReactants * efficiency < maxMulInProductsWithPerfectEfficiency
+      => IncompatibleConstraints(balancedEquation, limitingReactant,
+        maxMulInProductsWithPerfectEfficiency * balancedEquation.leftCoefOf(limitingReactant) / efficiency)
+      case (_, Some((mostDemandingProduct, maxMulInProductsWithPerfectEfficiency))) =>
+        mkSuccess(balancedEquation, maxMulInProductsWithPerfectEfficiency / efficiency, None)
+      case (Some((limitingReactant, minMulInReactants)), None) =>
+        mkSuccess(balancedEquation, minMulInReactants, Some(limitingReactant))
+      case (None, None) =>
+        Failure("no amount set for neither reactants nor products")
     }
-    val reactantsWithUsage = individuallyPossibleCoefs.map { (molec, indivCoef) =>
-      val amountAvailable = reactantsMap.getOrElse(molec, Some(0.mol)).get
-      (molec, Some(amountAvailable), if indivCoef == 0.mol then 0.0.mol else globalCoef / indivCoef * amountAvailable)
-    } ++ balancedEquation.left
-      .filter((molec, coef) => reactantsMap.apply(molec).isEmpty)
-      .map((molec, coef) => (molec, None, globalCoef * coef))
-    Success(reactantsWithUsage, balancedEquation, efficiency, products)
   }
 
   private def computeBalancedEquation(): Option[BalancedEquation] = equation match {
@@ -46,11 +52,19 @@ final case class Reaction(equation: Equation, reactants: Seq[(Molecule, Option[M
       throw AssertionError(s"unexpected ${equation.getClass.getName}")
   }
 
-  private def findMissingReactant(balancedEquation: BalancedEquation): Option[Molecule] = {
-    balancedEquation.left.find { (molec, coef) =>
-      coef > 0 && reactants.toMap.get(molec).forall(_.exists(_ <= 0.mol))
-    }.map(_._1)
-  }
+  private def mkSuccess(balancedEquation: BalancedEquation, reactionMul: Mol, limitingReactantOpt: Option[Molecule]): Success = Success(
+    balancedEquation,
+    balancedEquation.left.map { (reactant, coef) =>
+      val consumed = reactionMul * coef
+      (reactant, reactants.get(reactant), consumed)
+    },
+    balancedEquation.right.map { (product, coef) =>
+      val produced = reactionMul * coef * efficiency
+      (product, produced)
+    },
+    limitingReactantOpt,
+    efficiency
+  )
 
 }
 
@@ -58,22 +72,42 @@ object Reaction {
 
   enum Result {
     case Failure(msg: String)
-    case Success(reactants: Seq[(Molecule, Option[Mol], Mol)], balancedEquation: BalancedEquation, efficiency: Double, products: List[(Molecule, Mol)])
+    case BalancedOnly(balancedEquation: BalancedEquation, msg: String)
+    case IncompatibleConstraints(
+                                  balancedEquation: BalancedEquation,
+                                  limitingReactant: Molecule,
+                                  requiredAmount: Mol
+                                )
+    case Success(
+                  balancedEquation: BalancedEquation,
+                  reactants: Seq[(Molecule, Option[Mol], Mol)],
+                  products: List[(Molecule, Mol)],
+                  limitingReactantOpt: Option[Molecule],
+                  efficiency: Double
+                )
 
     def asSuccess: Success = this match {
-      case failure: Failure =>
-        throw AssertionError(failure.toString)
       case success: Success => success
+      case _ =>
+        throw AssertionError(toString)
     }
 
     override def toString: String = this match {
-      case Result.Failure(msg) => s"Reaction failed: $msg"
-      case Result.Success(reactants, balancedEquation, efficiency, products) =>
+      case Result.Failure(msg) =>
+        s"Reaction failed: $msg"
+      case Result.BalancedOnly(balancedEquation, msg) =>
+        s"$msg\nBalanced equation: $balancedEquation"
+      case Result.IncompatibleConstraints(balancedEquation, limitingReactant, requiredAmount) =>
+        val requiredMass = requiredAmount * limitingReactant.mass
+        s"The desired amount of products cannot be obtained with less than $requiredMass ($requiredAmount) of $limitingReactant" +
+          s"\nBalanced equation: $balancedEquation"
+      case Result.Success(balancedEquation, reactants, products, limitingReactantOpt, efficiency) =>
         "Reaction succeeded:\n" +
           ("using reactants\n" +
             formatReactantsAmounts(reactants).indent(2) +
             "according to " + balancedEquation.toString + "\n" +
             f"with an efficiency of ${efficiency * 100}%.2f" + "%\n" +
+            limitingReactantOpt.map(lr => s"limiting reactant is $lr\n").getOrElse("") +
             "the products are\n" +
             formatProductsAmounts(products).indent(2)).indent(2)
     }
@@ -84,7 +118,7 @@ object Reaction {
       case (molec, Some(amountAvailable), amountUsed) =>
         f"$molec: $amountAvailable (${amountAvailable * molec.mass}) of which ${amountUsed / amountAvailable * 100}%.2f" + "% were used"
       case (molec, None, amoundUsed) =>
-        s"$molec: unlimited, $amoundUsed (${amoundUsed * molec.mass}) were used"
+        s"$molec: $amoundUsed (${amoundUsed * molec.mass})"
     }.mkString("\n")
   }
 
