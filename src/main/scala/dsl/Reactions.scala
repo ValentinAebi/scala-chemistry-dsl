@@ -33,27 +33,24 @@ extension (eq: NoCoefEquation) infix def in(params: ParametersListPlaceholder): 
     Failure(msg)
 }
 
-object available
+object reactants
 
-extension (a: available.type) def apply(reactants: MoleculeAmount*)(using ctx: Context): Unit = {
-  for ((molecule, moles) <- reactants) {
-    ctx.saveReactantConstraint(molecule, moles)
-  }
+extension (a: reactants.type) def apply(reactants: MemberContext ?=> Unit)(using ctx: Context): Unit =
+  reactants(using ReactantsContext(ctx))
+
+object products
+
+extension (t: products.type) def apply(products: MemberContext ?=> Unit)(using ctx: Context): Unit = {
+  products(using ProductsContext(ctx))
 }
 
-object target
-
-extension (t: target.type) def apply(products: MoleculeAmount*)(using ctx: Context): Unit = {
-  for ((molecule, moles) <- products) {
-    ctx.saveProductConstraint(molecule, moles)
-  }
+extension (amount: Gram) infix def of(molecule: Molecule)(using memberCtx: MemberContext): Unit = {
+  memberCtx.saveAmount(molecule, amount / molecule.mass)
 }
 
-extension (amount: Gram) infix def of(molecule: Molecule): MoleculeAmount =
-  molecule -> amount / molecule.mass
-
-extension (amount: Mol) infix def of(molecule: Molecule): MoleculeAmount =
-  molecule -> amount
+extension (amount: Mol) infix def of(molecule: Molecule)(using memberCtx: MemberContext): Unit = {
+  memberCtx.saveAmount(molecule, amount)
+}
 
 object efficiency {
   def ==(percent: Percent)(using ctx: Context): Unit = {

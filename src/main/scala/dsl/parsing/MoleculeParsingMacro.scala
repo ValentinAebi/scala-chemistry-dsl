@@ -1,12 +1,13 @@
 package dsl.parsing
 
-import chemistry.{Molecule, NoCoefEquation}
+import chemistry.Molecule
 import dsl.MoleculeFormatException
 import dsl.parsing.parseMolecule
 
 import scala.quoted.{Expr, Quotes}
 
-implicit inline def parseAndStaticCheckMolecule(inline str: String): Molecule = ${parseAndStaticCheckMoleculeMacroImpl('str)}
+implicit inline def parseAndStaticCheckMolecule(inline str: String): Molecule =
+  ${parseAndStaticCheckMoleculeMacroImpl('str)}
 
 private def parseAndStaticCheckMoleculeMacroImpl(str: Expr[String])(using quotes: Quotes): Expr[Molecule] = {
   import quotes.reflect.report

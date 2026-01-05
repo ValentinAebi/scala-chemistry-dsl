@@ -102,7 +102,7 @@ object Reaction {
         s"The desired amount of products cannot be obtained with less than $requiredMass ($requiredAmount) of $limitingReactant" +
           s"\nBalanced equation: $balancedEquation"
       case Result.Success(balancedEquation, reactants, products, limitingReactantOpt, efficiency) =>
-        "Reaction succeeded:\n" +
+        "Computation succeeded:\n" +
           ("using reactants\n" +
             formatReactantsAmounts(reactants).indent(2) +
             "according to " + balancedEquation.toString + "\n" +
