@@ -5,7 +5,7 @@ A DSL allowing to describe chemical equations and reactions, balance equations, 
 ## Example
 
 ```Scala
-equation ~ "C6H12O6" + "O2" --> "H2O" + "CO2" in reaction:
+equation ~ "C6H12O6" + "O2" --> "H2O" + "CO2" as reaction:
     reactants:
       200.g of "C6H12O6"
     efficiency == 60.percent

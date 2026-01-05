@@ -21,7 +21,7 @@ extension (react: reaction.type) def apply(paramsList: Context ?=> Unit): Parame
   ctx
 }
 
-extension (eq: NoCoefEquation) infix def in(params: ParametersListPlaceholder): Result = params match {
+extension (eq: NoCoefEquation) infix def as(params: ParametersListPlaceholder): Result = params match {
   case ctx: Context =>
     val reaction = ctx.mkReactionFor(eq)
     val reactionResult = reaction.react
