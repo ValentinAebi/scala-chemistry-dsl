@@ -41,7 +41,7 @@ Examples: `H2O`, `CO(NH2)2`, `CrO4^2-`
 
 ## Structure of this repository
 
-Examples can be found [here](src/main/scala/main.scala) and [here](src/main/scala/report_chained_example.scala).
+Direct links: [examples](src/main/scala/main.scala), [more complex example](src/main/scala/report_chained_example.scala), [report](Report.pdf).
 
 DSL implementation: [`dsl` package](src/main/scala/dsl)
 
